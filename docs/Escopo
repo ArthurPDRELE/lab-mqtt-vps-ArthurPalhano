@@ -1,0 +1,50 @@
+1. Definição do Problema
+
+
+O projeto aborda a vulnerabilidade de segurança em áreas de armazenamento restrito, onde o acesso não supervisionado a itens de alto valor ou materiais críticos representa um risco operacional.
+A ausência de um sistema de monitoramento em tempo real impossibilita a rastreabilidade de acessos, gerando riscos de perdas patrimoniais e comprometimento da integridade do inventário.
+
+
+2. Escopo do Monitoramento
+
+
+
+Para a resolução deste problema, será implementado um sistema de telemetria focado em um único ponto de extremidade:
+
+    Variável Monitorada: Estado de transição da porta (Aberto/Fechado).
+
+    Sensor Utilizado: Sensor magnético
+
+    Protocolo de Dados: Representação binária do estado físico.
+
+        0: Circuito fechado (Porta devidamente encostada).
+
+        1: Circuito aberto (Evento de risco: Porta aberta ou violação).
+
+
+
+3. Arquitetura de Tópicos MQTT
+
+
+
+A comunicação entre o dispositivo (sensor) e o broker hospedado na VPS seguirá uma estrutura hierárquica para garantir a organização dos dados:
+
+    empresa/estoque/porta/status
+
+        Finalidade: Publicação do estado bruto do sensor.
+
+        Payload: 0 ou 1.
+
+    empresa/estoque/sistema/alerta
+
+        Finalidade: Canal de saída para notificações críticas processadas.
+
+        Payload: PORTA_ABERTA_ALERTA (disparado quando o status for 1).
+
+4. Resultados Esperados
+
+    Monitoramento Remoto: Visualização em tempo real dos estados via subscriber no terminal da VPS DigitalOcean.
+
+    Automação de Eventos: Publicação automática de alertas no tópico de sistema sempre que houver mudança de estado para positivo (1).
+
+    Auditoria de Dados: Geração de logs de eventos para análise posterior de horários de abertura e fechamento, garantindo a conformidade com as normas de segurança da empresa.
