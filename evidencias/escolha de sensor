@@ -1,0 +1,43 @@
+Escolha do sensor e meus motivos.
+
+
+Comparacao dos sensores
+
+
+    Sensor Magnético de Contato (Reed Switch)
+
+        Vantagens: Baixíssimo custo, não consome energia em estado de repouso, instalação simples e discreta.
+
+        Ponto de Atenção: É um componente mecânico interno (ampola de vidro), embora protegido pela carcaça de plástico.
+
+    Sensor Magnético Industrial (Blindado)
+
+        Vantagens: Alta resistência a impactos, vedação contra umidade e poeira, ideal para portões pesados ou ambientes de oficina.
+
+        Ponto de Atenção: Custo elevado e dimensões maiores, sendo desproporcional para armários ou portas internas comuns.
+
+    Sensor de Efeito Hall (Eletrônico)
+
+        Vantagens: Por ser um estado sólido (sem partes móveis), possui vida útil teoricamente infinita e alta velocidade de resposta.
+
+        Ponto de Atenção: Requer alimentação elétrica constante (VCC) e é mais suscetível a interferências de outros campos magnéticos próximos.
+
+    Chave Fim de Curso (Micro Switch)
+
+        Vantagens: Permite um ajuste mecânico tátil, confirmando que a porta foi fisicamente pressionada contra o batente.
+
+        Ponto de Atenção: Sofre desgaste por atrito e pode falhar se a porta sofrer qualquer empenamento ou desalinhamento ao longo do tempo.
+
+Justificativa da Escolha do Reed Switch
+
+A escolha pelo Reed Switch para este projeto de monitoramento via ESP32 e VPS foi baseada no seguinte
+
+    Eficiência Energética: Por ser um componente passivo, ele permite que o ESP32 utilize menos corrente, facilitando o uso com baterias ou fontes simples.
+
+    Simplicidade de Hardware: Permite a ligação direta nos pinos do ESP32 usando o resistor interno de Pull-up, eliminando a necessidade de componentes extras na fiação.
+
+    Durabilidade por Proximidade: Como não exige contato físico direto (funciona por campo magnético), o sensor não sofre o desgaste mecânico que uma chave de pressão sofreria.
+
+    Custo-Benefício: É a solução mais acessível, permitindo que o sistema de segurança seja expandido para várias portas do estoque sem aumentar significativamente o orçamento.
+
+    Confiabilidade em IoT: Sua leitura digital simples (0 ou 1) é ideal para o protocolo MQTT, garantindo que mensagens leves e rápidas sejam enviadas para o servidor na nuvem.
