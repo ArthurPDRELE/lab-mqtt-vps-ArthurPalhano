@@ -14,8 +14,8 @@ Sensor / Dado
 Sensor Magnético de Contato (Reed Switch) conectado ao ESP32, operando por evento (mudança de estado).
 Estrutura de Tópicos MQTT
 Tópico	Descrição	Publisher	Subscriber
-empresa/estoque/porta/status	Envia 0 (fechado) ou 1 (aberto)	ESP32	Terminal VPS
-empresa/estoque/sistema/alerta	Mensagem de alerta (tempo excedido > 60s)	ESP32	Terminal VPS
+empresa/estoque/porta/status	Envia Porta fechada (fechado) ou Porta aberta (aberto)	ESP32	Terminal VPS
+empresa/estoque/sistema/alerta	Envia ALERTA CRITICO PORTA ABERTA (tempo excedido > 60s)	ESP32	Terminal VPS
 Resultado Esperado
 
 Monitoramento via logs em tempo real no terminal confirmando cada abertura e fechamento, além de um aviso visual crítico caso a porta permaneça aberta por mais de um minuto.
