@@ -4,7 +4,7 @@
 // --- Configurações de Rede e Broker ---
 const char* ssid = "Wokwi-GUEST"; 
 const char* password = ""; 
-const char* mqtt_server = "SEU_IP_DA_VPS"; 
+const char* mqtt_server = "broker.emqx.io"; 
 const int mqtt_port = 1883; 
 
 // --- Pinos e Variáveis de Controle ---
@@ -20,7 +20,6 @@ PubSubClient client(espClient);
 void setup_wifi() {
   Serial.println("\nConectando Wi-Fi...");
   WiFi.begin(ssid, password);
-  // Nota: Aqui o while ainda é aceitável no setup, pois sem Wi-Fi o app não inicia
   while (WiFi.status() != WL_CONNECTED) {
     delay(500); 
     Serial.print(".");
@@ -29,13 +28,12 @@ void setup_wifi() {
 }
 
 void reconnect() {
-  // Verifica a conexão sem travar o loop principal
   if (!client.connected()) {
     unsigned long agora = millis();
-    if (agora - ultimoCheckConexao > 5000) { // Tenta reconectar a cada 5 segundos
+    if (agora - ultimoCheckConexao > 5000) { 
       ultimoCheckConexao = agora;
       Serial.print("Tentando conexão MQTT...");
-      if (client.connect("ESP32_Estoque_Arthur")) {
+      if (client.connect("ESP32_Estoque_Arthur_123")) {
         Serial.println("Conectado!");
       } else {
         Serial.print("Falhou, rc=");
@@ -49,41 +47,36 @@ void setup() {
   Serial.begin(115200);
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
-  
-  // INPUT_PULLUP evita flutuação no pino se o sensor estiver desconectado
   pinMode(pinoSensor, INPUT_PULLUP);
 }
 
 void loop() {
-  reconnect(); // Tenta reconectar de forma não bloqueante
+  reconnect(); 
   client.loop();
 
-  // Leitura do estado (Invertida: HIGH quando o ímã se afasta/porta abre)
   int estadoAtual = digitalRead(pinoSensor); 
 
-  // --- Lógica 1: Detecção de Mudança de Estado (Evento) ---
+  // --- Lógica 1: Mudança de Estado ---
   if (estadoAtual != estadoAnterior) {
-    // Publica imediatamente a mudança
     client.publish("empresa/estoque/porta/status", estadoAtual == HIGH ? "1" : "0");
     
     if (estadoAtual == HIGH) {
-      Serial.println("Porta ABERTA - Iniciando cronômetro.");
-      tempoAbertura = millis(); // "Zera" o cronômetro salvando o tempo atual
+      Serial.println("Porta ABERTA - Cronômetro iniciado.");
+      tempoAbertura = millis(); 
       alertaTempoExcedidoEnviado = false;
     } else {
-      Serial.println("Porta FECHADA - Cronômetro parado.");
-      tempoAbertura = 0; // Reseta o tempo
+      Serial.println("Porta FECHADA.");
+      tempoAbertura = 0; 
     }
     estadoAnterior = estadoAtual;
   }
 
-  // --- Lógica 2: Alerta de Tempo Excedido (Uso do millis para contagem) ---
-  if (estadoAtual == HIGH && !alertaTempoExcedidoEnviado) {
-    // Compara o tempo atual com o momento em que a porta abriu
+  // --- Lógica 2: Alerta de Tempo Excedido (60s) ---
+  if (estadoAtual == HIGH && tempoAbertura > 0 && !alertaTempoExcedidoEnviado) {
     if (millis() - tempoAbertura >= 60000) { 
-      client.publish("empresa/estoque/sistema/alerta", "ALERTA: PORTA ABERTA HÁ MAIS DE 1 MINUTO");
-      Serial.println("!!! CRÍTICO: TEMPO EXCEDIDO !!!");
-      alertaTempoExcedidoEnviado = true; // Garante que o alerta seja enviado apenas uma vez por abertura
+      client.publish("empresa/estoque/sistema/alerta", "ALERTA: PORTA ABERTA HA MAIS DE 1 MINUTO");
+      Serial.println("!!! ALERTA ENVIADO !!!");
+      alertaTempoExcedidoEnviado = true; 
     }
   }
 }
