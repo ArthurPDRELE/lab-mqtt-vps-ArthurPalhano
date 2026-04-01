@@ -1,28 +1,59 @@
+Aqui está o escopo do projeto formatado em lista limpa, sem o uso de ícones ou emojis, otimizado para a visualização no GitHub:
 Escopo do Projeto — Arthur Palhano
-📝 Integrantes
+Integrantes
 
     Arthur Palhano do Rosario — Técnico em Eletrônica
 
-⚠️ Problema
+Problema
 
-O projeto aborda a vulnerabilidade de segurança em áreas de estoque restrito, onde o acesso não supervisionado ou o esquecimento de portas abertas gera riscos de perdas. O sistema garante rastreabilidade total e alertas em tempo real para portas deixadas abertas.
-🔍 O que será monitorado
+    Contexto: Áreas de armazenamento com acesso restrito.
 
-Estado binário (Aberto/Fechado) de uma porta de acesso e o tempo de permanência em estado aberto.
-🔌 Sensor / Dado
+    Risco: Vulnerabilidade de segurança por acesso não supervisionado ou esquecimento de portas abertas, resultando em risco de perdas.
 
-Sensor Magnético de Contato (Reed Switch) conectado ao ESP32, operando por evento (mudança de estado). A inteligência de tempo é processada via função millis().
-🌐 Estrutura de Tópicos MQTT
-Tópico	Descrição	Publisher	Subscriber
-empresa/estoque/porta/status	Envia 0 (fechado) ou 1 (aberto)	ESP32	Terminal VPS
-empresa/estoque/sistema/alerta	Mensagem de alerta (tempo excedido > 60s)	ESP32	Terminal VPS
-🚀 Resultado Esperado
+    Solução: Sistema de rastreabilidade total com alertas em tempo real para detecção de portas deixadas abertas por tempo excessivo.
 
-Monitoramento via logs em tempo real no terminal confirmando cada abertura e fechamento, além de um aviso visual crítico caso a porta permaneça aberta por mais de um minuto.
-🛠️ Hardware / Software Planejado
+O que será monitorado
 
-    Publisher: ESP32 (Simulado no Wokwi)
+    Estado da Porta: Binário (0 para Fechado / 1 para Aberto).
 
-    Broker: Mosquitto na VPS DigitalOcean (IP: 134.199.142.253)
+    Tempo de Exposição: Cronometragem do período em que a porta permanece no estado aberto.
 
-    Subscriber: Terminal SSH da VPS (via mosquitto_sub)
+Sensor / Dado
+
+    Hardware: Sensor Magnético de Contato (Reed Switch).
+
+    Lógica de Acionamento: Operação por evento, enviando dados imediatamente após a mudança de estado detectada no GPIO 23.
+
+    Processamento: Uso da função millis() no ESP32 para contagem de tempo não bloqueante, evitando interrupções na conexão MQTT.
+
+Estrutura de Tópicos MQTT
+
+    Status da Porta:
+
+        Tópico: empresa/estoque/porta/status
+
+        Publisher: ESP32
+
+        Subscriber: Terminal VPS
+
+    Alerta de Segurança:
+
+        Tópico: empresa/estoque/sistema/alerta
+
+        Publisher: ESP32
+
+        Subscriber: Terminal VPS
+
+Resultado Esperado
+
+    Monitoramento: Logs detalhados no terminal da VPS confirmando cada interação de abertura e fechamento.
+
+    Segurança Ativa: Geração de aviso visual crítico no terminal caso a porta permaneça aberta por mais de 60 segundos.
+
+Hardware / Software Planejado
+
+    Dispositivo (Publisher): ESP32 (Simulado via Wokwi).
+
+    Servidor (Broker): Mosquitto MQTT instalado em VPS DigitalOcean (IP: 134.199.142.253).
+
+    Aplicação (Subscriber): Terminal SSH da VPS através da ferramenta mosquitto_sub.
