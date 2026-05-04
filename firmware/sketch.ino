@@ -7,6 +7,10 @@ const char* password = "";
 const char* mqtt_server = "134.199.142.253"; 
 const int mqtt_port = 1883; 
 
+// --- Credenciais de Autenticação (Adicionadas) ---
+const char* mqtt_user = "turma";   // Usuário solicitado
+const char* mqtt_password = "uniftec"; // Senha solicitada
+
 // --- Definição dos Pinos ---
 const int pinoPorta = 23;      // Reed Switch
 const int pinoPIR = 13;        // Sensor de Movimento
@@ -45,9 +49,11 @@ void reconnect() {
     unsigned long agora = millis();
     if (agora - ultimoCheckConexao > 5000) { 
       ultimoCheckConexao = agora;
-      Serial.print("Tentando conexão MQTT na VPS...");
-      if (client.connect("ESP32_Estoque_Arthur_Palhano")) {
-        Serial.println("Conectado!");
+      Serial.print("Tentando conexão MQTT na VPS com autenticação...");
+      
+      // --- MODIFICAÇÃO: Conexão agora utiliza usuário e senha[cite: 1] ---
+      if (client.connect("ESP32_Estoque_Arthur_Palhano", mqtt_user, mqtt_password)) {
+        Serial.println("Conectado com sucesso!");
       } else {
         Serial.print("Falhou, rc=");
         Serial.println(client.state());
