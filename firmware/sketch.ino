@@ -1,23 +1,35 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 
-// --- Configurações de Rede e Broker (Conforme seu Escopo e Guia) ---
+// --- Configurações de Rede e Broker ---
 const char* ssid = "Wokwi-GUEST"; 
 const char* password = ""; 
-const char* mqtt_server = "134.199.142.253"; // Seu IP da VPS DigitalOcean
+const char* mqtt_server = "134.199.142.253"; 
 const int mqtt_port = 1883; 
 
-// --- Pinos e Variáveis de Controle ---
-const int pinoSensor = 23; 
-int estadoAnterior = -1;
-unsigned long tempoAbertura = 0;
+// --- Definição dos Pinos ---
+const int pinoPorta = 23;      // Reed Switch
+const int pinoPIR = 13;        // Sensor de Movimento
+const int pinoLDR = 34;        // Sensor de Luminosidade (ADC)
+const int pinoRele = 2;        // Atuador da Luz (LED no ESP32 ou Relé)
+
+// --- Variáveis de Controle de Tempo e Estado ---
+int estadoPortaAnterior = -1;
+bool movimentoAnterior = false;
+bool luzAcesa = true;
+
+unsigned long tempoAberturaPorta = 0;
+unsigned long ultimoMovimento = 0;
 unsigned long ultimoCheckConexao = 0;
-bool alertaTempoExcedidoEnviado = false;
+unsigned long ultimoEnvioLDR = 0;
+
+bool alertaPortaExcedidoEnviado = false;
+const long tempoLimitePorta = 60000;    // 1 minuto
+const long tempoLimiteLuz = 600000;    // 10 minutos
 
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-// Função para conectar ao Wi-Fi do Wokwi
 void setup_wifi() {
   Serial.println("\nConectando Wi-Fi...");
   WiFi.begin(ssid, password);
@@ -28,16 +40,12 @@ void setup_wifi() {
   Serial.println("\nWi-Fi Conectado!");
 }
 
-// Função de reconexão MQTT não bloqueante (Uso de millis)
 void reconnect() {
   if (!client.connected()) {
     unsigned long agora = millis();
-    // Tenta reconectar a cada 5 segundos para não travar o processador
     if (agora - ultimoCheckConexao > 5000) { 
       ultimoCheckConexao = agora;
       Serial.print("Tentando conexão MQTT na VPS...");
-      
-      // ID único para evitar conflitos no Broker
       if (client.connect("ESP32_Estoque_Arthur_Palhano")) {
         Serial.println("Conectado!");
       } else {
@@ -51,44 +59,76 @@ void reconnect() {
 void setup() {
   Serial.begin(115200);
   setup_wifi();
-  
-  // Configuração do Servidor e Porta (1883 conforme guia de lab)
   client.setServer(mqtt_server, mqtt_port);
   
-  // Pino 23 configurado com resistor de pull-up interno
-  pinMode(pinoSensor, INPUT_PULLUP);
+  pinMode(pinoPorta, INPUT_PULLUP);
+  pinMode(pinoPIR, INPUT);
+  pinMode(pinoRele, OUTPUT);
+  
+  digitalWrite(pinoRele, HIGH); // Inicia com a luz acesa
+  ultimoMovimento = millis();   // Inicia o cronômetro de vacância
 }
 
 void loop() {
   reconnect(); 
-  client.loop(); // Mantém o "keep-alive" com o Broker
+  client.loop();
 
-  // Leitura do estado (Wokwi Switch para GND: HIGH = Aberto | LOW = Fechado)
-  int estadoAtual = digitalRead(pinoSensor); 
+  unsigned long tempoAtual = millis();
 
-  // --- Lógica 1: Mudança de Estado (Detecção de Abertura/Fechamento) ---
-  if (estadoAtual != estadoAnterior) {
-    // Publica status conforme os tópicos do seu escopo
-    client.publish("empresa/estoque/porta/status", estadoAtual == HIGH ? "1" : "0");
-    
-    if (estadoAtual == HIGH) {
-      Serial.println("Porta ABERTA - Cronômetro de segurança iniciado.");
-      tempoAbertura = millis(); // Salva o tempo de início usando millis()
-      alertaTempoExcedidoEnviado = false;
-    } else {
-      Serial.println("Porta FECHADA.");
-      tempoAbertura = 0; 
+  // --- 1. Lógica do Sensor de Porta ---
+  int estadoPorta = digitalRead(pinoPorta); 
+  if (estadoPorta != estadoPortaAnterior) {
+    client.publish("empresa/estoque/porta/status", estadoPorta == HIGH ? "aberto" : "fechado");
+    if (estadoPorta == HIGH) {
+      tempoAberturaPorta = tempoAtual;
+      alertaPortaExcedidoEnviado = false;
     }
-    estadoAnterior = estadoAtual;
+    estadoPortaAnterior = estadoPorta;
   }
 
-  // --- Lógica 2: Alerta de Tempo Excedido (60 segundos) ---
-  // Verifica o tempo sem usar delay(), permitindo que o ESP32 continue operando
-  if (estadoAtual == HIGH && tempoAbertura > 0 && !alertaTempoExcedidoEnviado) {
-    if (millis() - tempoAbertura >= 60000) { 
-      client.publish("empresa/estoque/sistema/alerta", "ALERTA: PORTA ABERTA HA MAIS DE 1 MINUTO");
-      Serial.println("!!! ALERTA DE SEGURANÇA ENVIADO PARA A VPS !!!");
-      alertaTempoExcedidoEnviado = true; 
+  if (estadoPorta == HIGH && !alertaPortaExcedidoEnviado) {
+    if (tempoAtual - tempoAberturaPorta >= tempoLimitePorta) {
+      client.publish("empresa/estoque/sistema/alerta", "ALERTA CRITICO: PORTA ABERTA > 60s");
+      alertaPortaExcedidoEnviado = true;
     }
+  }
+
+  // --- 2. Lógica de Movimento (PIR) e Automação de Luz ---
+  bool movimentoAtual = digitalRead(pinoPIR);
+
+  if (movimentoAtual) {
+    ultimoMovimento = tempoAtual; // Reseta o cronômetro de 10 min
+    if (!movimentoAnterior) {
+      client.publish("empresa/estoque/presenca/alerta", "ALERTA: Movimento detectado!");
+      movimentoAnterior = true;
+    }
+    
+    // Se a luz estava apagada, religa ao detectar movimento
+    if (!luzAcesa) {
+      digitalWrite(pinoRele, HIGH);
+      luzAcesa = true;
+      client.publish("empresa/estoque/luz/automacao", "Luz ligada por detecção de presença");
+    }
+  } else {
+    if (movimentoAnterior) {
+      client.publish("empresa/estoque/presenca/alerta", "Ambiente normal: sem movimento.");
+      movimentoAnterior = false;
+    }
+  }
+
+  // Desligamento automático (10 minutos sem movimento)
+  if (luzAcesa && (tempoAtual - ultimoMovimento >= tempoLimiteLuz)) {
+    digitalWrite(pinoRele, LOW);
+    luzAcesa = false;
+    client.publish("empresa/estoque/luz/automacao", "Luzes desligadas por inatividade (10 min).");
+  }
+
+  // --- 3. Envio Periódico de Luminosidade (LDR) ---
+  if (tempoAtual - ultimoEnvioLDR > 30000) { // Envia a cada 30 segundos
+    int valorLDR = analogRead(pinoLDR);
+    char buffer[10];
+    sprintf(buffer, "%d", valorLDR);
+    client.publish("empresa/estoque/luz/nivel", buffer);
+    ultimoEnvioLDR = tempoAtual;
   }
 }
