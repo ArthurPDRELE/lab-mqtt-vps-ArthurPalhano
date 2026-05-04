@@ -1,28 +1,41 @@
-Escopo do Projeto — Arthur Palhano
-Integrantes
+# Monitoramento e Automação de Estoque Inteligente
 
-    Arthur Palhano do Rosario — Técnico em Eletrônica
+## Integrante
+* **Arthur Palhano do Rosario** — Técnico em Eletrônica
 
-Problema
+## Problema
+O projeto aborda a vulnerabilidade de segurança e a ineficiência operacional em áreas de estoque restrito. O objetivo é mitigar riscos vindos de acessos não supervisionados, portas esquecidas abertas e o desperdício de energia elétrica.
 
-O projeto aborda a vulnerabilidade de segurança em áreas de estoque restrito, onde o acesso não supervisionado ou o esquecimento de portas abertas gera riscos de perdas. O sistema garante rastreabilidade total e alertas em tempo real para portas deixadas abertas.
-O que será monitorado
+## O que será monitorado e controlado
+1. **Acesso Físico:** Estado (Aberto/Fechado) da porta e tempo de permanência.
+2. **Presença Real:** Detecção de movimento infravermelho no ambiente.
+3. **Ambiente:** Medição de luminosidade para validar a necessidade de luz artificial.
+4. **Atuação Automática:** Controle de desligamento da iluminação após 10 minutos de inatividade.
 
-Estado binário (Aberto/Fechado) de uma porta de acesso e o tempo de permanência em estado aberto.
-Sensor / Dado
+## Sensores, Atuadores e Dados
+* **Sensor Magnético (Reed Switch):** Monitora a abertura da porta.
+* **Sensor PIR (HC-SR501):** Detecta movimento para segurança e automação.
+* **Sensor LDR:** Mede a luminosidade ambiente.
+* **Módulo Relé:** Atua no desligamento da carga (lâmpada) por comando do ESP32.
 
-Sensor Magnético de Contato (Reed Switch) conectado ao ESP32, operando por evento (mudança de estado).
-Estrutura de Tópicos MQTT
-Tópico	Descrição	Publisher	Subscriber
-empresa/estoque/porta/status	Envia Porta fechada (fechado) ou Porta aberta (aberto)	ESP32	Terminal VPS
-empresa/estoque/sistema/alerta	Envia ALERTA CRITICO PORTA ABERTA (tempo excedido > 60s)	ESP32	Terminal VPS
-Resultado Esperado
+## Estrutura de Tópicos MQTT
+O sistema utiliza uma hierarquia organizada para facilitar a filtragem de dados na VPS:
 
-Monitoramento via logs em tempo real no terminal confirmando cada abertura e fechamento, além de um aviso visual crítico caso a porta permaneça aberta por mais de um minuto.
-Hardware / Software planejado
+| Tópico | Descrição | Mensagens de Exemplo |
+| :--- | :--- | :--- |
+| `empresa/estoque/porta/status` | Estado físico da porta | `aberto` / `fechado` |
+| `empresa/estoque/presenca/alerta` | Notificação imediata de movimento | `ALERTA: Movimento detectado!` |
+| `empresa/estoque/luz/nivel` | Leitura da luminosidade (0-4095) | `1250` |
+| `empresa/estoque/luz/automacao` | Status do desligamento automático | `Luzes desligadas por inatividade (10 min).` |
+| `empresa/estoque/sistema/alerta` | Alertas críticos do sistema | `ALERTA CRITICO: PORTA ABERTA > 60s` |
 
-    Publisher: ESP32 (Simulado no Wokwi)
+## Lógica de Funcionamento e Resultados Esperados
+* **Segurança Ativa:** O sistema envia uma notificação instantânea ao detectar movimento, permitindo que a equipe de segurança receba o alerta em tempo real via broker.
+* **Gestão de Energia:** Se o sensor PIR não detectar movimento por um período ininterrupto de 10 minutos, o ESP32 desliga automaticamente a iluminação e publica a ação no tópico de automação.
+* **Rastreabilidade:** Monitoramento via logs em tempo real no terminal SSH, confirmando eventos de entrada, presença e economia de energia.
+* **Auditoria:** Os dados coletados permitem analisar horários de maior fluxo e identificar incidentes de esquecimento de luzes acesas.
 
-    Broker: Mosquitto na VPS DigitalOcean
-
-    Subscriber: Terminal SSH da VPS (via mosquitto_sub)
+## Hardware / Software Planejado
+* **Publisher:** ESP32 (Simulação via Wokwi).
+* **Broker:** Mosquitto MQTT configurado em VPS DigitalOcean.
+* **Subscriber:** Terminal SSH da VPS (via `mosquitto_sub`) para visualização de logs.
